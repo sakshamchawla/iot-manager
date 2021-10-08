@@ -1,0 +1,13 @@
+{
+  "code": "flash_scene_1",
+  "value": {
+    "bright": 255,
+    "frequency": 1,
+    "hsv": [{
+      "h": 0,
+      "s": 255,
+      "v": 255
+    }],
+    "temperature": 255
+  }
+}
