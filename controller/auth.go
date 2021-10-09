@@ -67,8 +67,8 @@ func GetDevice(deviceId string) {
 		return
 	}
 	defer resp.Body.Close()
-	bs, _ := ioutil.ReadAll(resp.Body)
-	log.Println("resp:", string(bs))
+	// bs, _ := ioutil.ReadAll(resp.Body)
+	// log.Println("resp:", string(bs))
 }
 
 func BuildHeader(req *http.Request, body []byte) {
@@ -83,7 +83,7 @@ func BuildHeader(req *http.Request, body []byte) {
 	}
 
 	sign := buildSign(req, body, ts)
-	fmt.Printf("Sign: %s\n", sign)
+	// fmt.Printf("Sign: %s\n", sign)
 	req.Header.Set("sign", sign)
 }
 

@@ -39,20 +39,30 @@ type EmergencyLights struct {
 	Timer  int    `json: "timer"`
 }
 
-type HSVValue struct{
+type HSVValue struct {
 	H int `json:"h"`
 	S int `json:"s"`
 	V int `json:"v"`
 }
 
 type IOTRGBFlashValue struct {
-	Bright int `'json: "bright"'`
-	Frequency int `json: "frequency"`
-	HSV []HSVValue `json: "hsv"`
-	Temperature int `json: "temperature"`
+	Bright      int        `'json: "bright"'`
+	Frequency   int        `json: "frequency"`
+	HSV         []HSVValue `json: "hsv"`
+	Temperature int        `json: "temperature"`
 }
 
 type IOTRGBFlashLights struct {
-	Code string `json: "code"`
+	Code  string           `json: "code"`
 	Value IOTRGBFlashValue `json: "value"`
+}
+
+type IOTSwitchLights struct {
+	Code  string `json: "code"`
+	Value bool   `json: value`
+}
+
+type IOTStringLights struct {
+	Code  string `json: "code"`
+	Value string `json: "value"`
 }
