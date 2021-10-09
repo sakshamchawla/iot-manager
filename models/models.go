@@ -36,7 +36,7 @@ type Status struct {
 type EmergencyLights struct {
 	Status string `json: "status"`
 	Code   string `json: "code"`
-	Timer  int    `json: "timer"`
+	Timer  int64  `json: "timer"`
 }
 
 type HSVValue struct {
