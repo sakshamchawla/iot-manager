@@ -22,5 +22,7 @@ func IOTRoutes() *mux.Router {
 		json.NewEncoder(rw).Encode(message)
 	})
 	router.HandleFunc("/iotapi/emergencylights", controller.EmergencyLights).Methods(http.MethodPost)
+	router.HandleFunc("/iotapi/partylights", controller.PartyLights).Methods(http.MethodPost)
+	router.HandleFunc("/iotapi/whitelights", controller.WhiteLights).Methods(http.MethodPost)
 	return router
 }

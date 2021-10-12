@@ -111,7 +111,33 @@ func turnOnEmergencyLights(timer int64, ch chan bool) {
 	switchAllLights(false)
 }
 
-func handleEmergencyLights(emergencylights models.EmergencyLights, ch chan bool)  {
+func turnOnPartyLights(timer int64, frequency int, ch chan bool) {
+	lights_config := config.Read_Config("Light_Modes")
+	login_config := config.Read_Config("Login")
+	light_devices := config.Read_Config("Devices").(models.Devices).Lights
+	var commands map[string][]models.IOTRGBFlashLights
+	commands = make(map[string][]models.IOTRGBFlashLights, 1)
+	var party_lights_obj models.IOTRGBFlashLights
+	_ = json.Unmarshal([]byte(lights_config.(models.Light_Modes).Modes["party_lights"]), &party_lights_obj)
+	party_lights_obj.Value.Frequency = frequency
+	commands["commands"] = append(commands["commands"], party_lights_obj)
+	fmt.Printf("%s", commands)
+	base_url := login_config.(models.Login).Host + login_config.(models.Login).Device_path
+	party_lights_body, err := json.Marshal(commands)
+	if err != nil {
+		panic(err)
+		message = models.Status{Status: "failed"}
+	}
+	switchAllLights(true)
+	setLight(light_devices, base_url, party_lights_body, login_config.(models.Login))
+
+	ch <- true
+	<-time.After(time.Duration(timer) * time.Second)
+	setAllWhiteLights()
+	switchAllLights(false)
+}
+
+func handleEmergencyLights(emergencylights models.EmergencyLights, ch chan bool) {
 	switch emergencylights.Status {
 	case "On":
 		{
@@ -134,6 +160,86 @@ func handleEmergencyLights(emergencylights models.EmergencyLights, ch chan bool)
 		setAllWhiteLights()
 		switchAllLights(false)
 	}
+}
+
+func handlePartyLights(partylights models.PartyLights, ch chan bool) {
+	switch partylights.Status {
+	case "On":
+		{
+			if partylights.Timer < 1 {
+				partylights.Timer = 15
+			}
+			go func() {
+				turnOnPartyLights(partylights.Timer, partylights.Frequency, ch)
+			}()
+			message = models.Status{Status: "accepted"}
+			select {
+			case <-ch:
+				ch <- true
+			}
+		}
+
+	case "Off":
+		// TODO: Needs better abort system to stop On goroutine
+		message = models.Status{Status: "accepted"}
+		setAllWhiteLights()
+		switchAllLights(false)
+	}
+}
+
+func handleWhiteLights(whitelights models.WhiteLights) {
+	switch whitelights.Status {
+	case "On":
+		{
+			go func() {
+				setAllWhiteLights()
+			}()
+			message = models.Status{Status: "accepted"}
+		}
+
+	case "Off":
+		message = models.Status{Status: "accepted"}
+
+		switchAllLights(false)
+	}
+}
+
+func PartyLights(w http.ResponseWriter, r *http.Request) {
+	ch := make(chan bool, 1)
+	w.Header().Set("Content-Type", "application/json")
+	var partylights models.PartyLights
+	err := json.NewDecoder(r.Body).Decode(&partylights)
+	if err != nil {
+		panic(err)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		handlePartyLights(partylights, ch)
+	}()
+	wg.Wait()
+	json.NewEncoder(w).Encode(message)
+}
+
+func WhiteLights(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+	var whitelights models.WhiteLights
+	err := json.NewDecoder(r.Body).Decode(&whitelights)
+	if err != nil {
+		panic(err)
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		handleWhiteLights(whitelights)
+	}()
+	wg.Wait()
+	json.NewEncoder(w).Encode(message)
 }
 
 func EmergencyLights(w http.ResponseWriter, r *http.Request) {

@@ -40,6 +40,16 @@ type EmergencyLights struct {
 	Timer  int64  `json: "timer"`
 }
 
+type PartyLights struct {
+	Frequency int    `json: "frequency"`
+	Timer     int64  `json: "timer"`
+	Status    string `json: "status"`
+}
+
+type WhiteLights struct {
+	Status string `json: "status"`
+}
+
 type HSVValue struct {
 	H int `json:"h"`
 	S int `json:"s"`
