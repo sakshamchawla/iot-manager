@@ -22,7 +22,8 @@ type Light_Modes struct {
 }
 
 type Devices struct {
-	Lights []string `json:"lights"`
+	Lights          []string `json:"lights"`
+	EmergencyLights []string `json:"emergencylights"`
 }
 
 type Message struct {

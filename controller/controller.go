@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
+var message models.Status
+
 func sendRequest(url string, body []byte, login_config models.Login) {
+	// setAuth()
 	request, error := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	request.Header.Set("Content-Type", login_config.Headers.Content_type)
 	request.Header.Set("mode", login_config.Headers.Mode)
@@ -21,6 +24,7 @@ func sendRequest(url string, body []byte, login_config models.Login) {
 	client := &http.Client{}
 	response, error := client.Do(request)
 	if error != nil {
+		message = models.Status{Status: "accepted"}
 		panic(error)
 	}
 	defer response.Body.Close()
@@ -44,7 +48,7 @@ func getConfig() (models.Login, models.Light_Modes, models.Devices) {
 func setAllWhiteLights() {
 	setAuth()
 	login_config, lights_config, devices := getConfig()
-	light_devices := devices.Lights
+	light_devices := devices.EmergencyLights
 	base_url := login_config.Host + login_config.Device_path
 	var commands map[string][]models.IOTStringLights
 	commands = make(map[string][]models.IOTStringLights, 1)
@@ -58,7 +62,7 @@ func setAllWhiteLights() {
 func switchAllLights(status bool) {
 	setAuth()
 	login_config, lights_config, devices := getConfig()
-	light_devices := devices.Lights
+	light_devices := devices.EmergencyLights
 	base_url := login_config.Host + login_config.Device_path
 	var commands map[string][]models.IOTSwitchLights
 	commands = make(map[string][]models.IOTSwitchLights, 1)
@@ -83,7 +87,7 @@ func setLight(light_devices []string, base_url string, body []byte, login_config
 	wg.Wait()
 }
 
-func turnOnEmergencyLights(timer int64) {
+func turnOnEmergencyLights(timer int64, ch chan bool) {
 	lights_config := config.Read_Config("Light_Modes")
 	login_config := config.Read_Config("Login")
 	light_devices := config.Read_Config("Devices").(models.Devices).Lights
@@ -96,41 +100,57 @@ func turnOnEmergencyLights(timer int64) {
 	emegergency_lights_body, err := json.Marshal(commands)
 	if err != nil {
 		panic(err)
+		message = models.Status{Status: "failed"}
 	}
 	switchAllLights(true)
 	setLight(light_devices, base_url, emegergency_lights_body, login_config.(models.Login))
-	time.Sleep(time.Duration(Timer) * time.Second)
+
+	ch <- true
+	<-time.After(time.Duration(timer) * time.Second)
 	setAllWhiteLights()
 	switchAllLights(false)
 }
 
-func handleEmergencyLights(emergencylights models.EmergencyLights) {
+func handleEmergencyLights(emergencylights models.EmergencyLights, ch chan bool)  {
 	switch emergencylights.Status {
 	case "On":
-		if emergencylights.Time < 1 {
-			emergencylights.Timer = 15
+		{
+			if emergencylights.Timer < 1 {
+				emergencylights.Timer = 15
+			}
+			go func() {
+				turnOnEmergencyLights(emergencylights.Timer, ch)
+			}()
+			message = models.Status{Status: "accepted"}
+			select {
+			case <-ch:
+				ch <- true
+			}
 		}
-		turnOnEmergencyLights(emergencylights.Timer)
+
 	case "Off":
+		// TODO: Needs better abort system to stop On goroutine
+		message = models.Status{Status: "accepted"}
 		setAllWhiteLights()
 		switchAllLights(false)
 	}
 }
 
 func EmergencyLights(w http.ResponseWriter, r *http.Request) {
+	ch := make(chan bool, 1)
 	w.Header().Set("Content-Type", "application/json")
 	var emergencylights models.EmergencyLights
 	err := json.NewDecoder(r.Body).Decode(&emergencylights)
 	if err != nil {
 		panic(err)
 	}
-	message := models.Status{Status: "accepted"}
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		turnOnEmergencyLights(emergencylights)
+		handleEmergencyLights(emergencylights, ch)
 	}()
-
+	wg.Wait()
 	json.NewEncoder(w).Encode(message)
 }
