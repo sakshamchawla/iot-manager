@@ -56,7 +56,7 @@ func setAllWhiteLights() {
 	_ = json.Unmarshal([]byte(lights_config.Modes["white_lights"]), &white_lights_obj)
 	commands["commands"] = append(commands["commands"], white_lights_obj)
 	body, _ := json.Marshal(commands)
-	setLight(light_devices, base_url, body, login_config)
+	setDevices(light_devices, base_url, body, login_config)
 }
 
 func switchAllLights(status bool) {
@@ -64,17 +64,17 @@ func switchAllLights(status bool) {
 	login_config, lights_config, devices := getConfig()
 	light_devices := devices.EmergencyLights
 	base_url := login_config.Host + login_config.Device_path
-	var commands map[string][]models.IOTSwitchLights
-	commands = make(map[string][]models.IOTSwitchLights, 1)
-	var switch_lights_obj models.IOTSwitchLights
+	var commands map[string][]models.IOTSwitchDevices
+	commands = make(map[string][]models.IOTSwitchDevices, 1)
+	var switch_lights_obj models.IOTSwitchDevices
 	_ = json.Unmarshal([]byte(lights_config.Modes["switch"]), &switch_lights_obj)
 	switch_lights_obj.Value = status
 	commands["commands"] = append(commands["commands"], switch_lights_obj)
 	body, _ := json.Marshal(commands)
-	setLight(light_devices, base_url, body, login_config)
+	setDevices(light_devices, base_url, body, login_config)
 }
 
-func setLight(light_devices []string, base_url string, body []byte, login_config models.Login) {
+func setDevices(light_devices []string, base_url string, body []byte, login_config models.Login) {
 	var wg sync.WaitGroup
 	for _, light_device := range light_devices {
 		url := base_url + light_device + "/commands"
@@ -103,7 +103,7 @@ func turnOnEmergencyLights(timer int64, ch chan bool) {
 		message = models.Status{Status: "failed"}
 	}
 	switchAllLights(true)
-	setLight(light_devices, base_url, emegergency_lights_body, login_config.(models.Login))
+	setDevices(light_devices, base_url, emegergency_lights_body, login_config.(models.Login))
 
 	ch <- true
 	<-time.After(time.Duration(timer) * time.Second)
@@ -129,7 +129,7 @@ func turnOnPartyLights(timer int64, frequency int, ch chan bool) {
 		message = models.Status{Status: "failed"}
 	}
 	switchAllLights(true)
-	setLight(light_devices, base_url, party_lights_body, login_config.(models.Login))
+	setDevices(light_devices, base_url, party_lights_body, login_config.(models.Login))
 
 	ch <- true
 	<-time.After(time.Duration(timer) * time.Second)
@@ -224,7 +224,6 @@ func PartyLights(w http.ResponseWriter, r *http.Request) {
 }
 
 func WhiteLights(w http.ResponseWriter, r *http.Request) {
-
 	w.Header().Set("Content-Type", "application/json")
 	var whitelights models.WhiteLights
 	err := json.NewDecoder(r.Body).Decode(&whitelights)
@@ -259,4 +258,20 @@ func EmergencyLights(w http.ResponseWriter, r *http.Request) {
 	}()
 	wg.Wait()
 	json.NewEncoder(w).Encode(message)
+}
+
+func TurnOffAllDevices(){
+	switchAllLights(false)
+	login_config, lights_config, devices := getConfig()
+	light_devices := devices.Sockets
+	base_url := login_config.Host + login_config.Device_path
+	var commands map[string][]models.IOTSwitchDevices
+	commands = make(map[string][]models.IOTSwitchDevices, 1)
+	var switch_lights_obj models.IOTSwitchDevices
+	_ = json.Unmarshal([]byte(lights_config.Modes["switch"]), &switch_lights_obj)
+	switch_lights_obj.Code = "switch"
+	switch_lights_obj.Value = false
+	commands["commands"] = append(commands["commands"], switch_lights_obj)
+	body, _ := json.Marshal(commands)
+	setDevices(light_devices, base_url, body, login_config)
 }

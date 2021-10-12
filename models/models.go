@@ -24,6 +24,7 @@ type Light_Modes struct {
 type Devices struct {
 	Lights          []string `json:"lights"`
 	EmergencyLights []string `json:"emergencylights"`
+	Sockets         []string `json: "sockets"`
 }
 
 type Message struct {
@@ -68,9 +69,9 @@ type IOTRGBFlashLights struct {
 	Value IOTRGBFlashValue `json: "value"`
 }
 
-type IOTSwitchLights struct {
+type IOTSwitchDevices struct {
 	Code  string `json: "code"`
-	Value bool   `json: value`
+	Value bool   `json: "value"`
 }
 
 type IOTStringLights struct {
